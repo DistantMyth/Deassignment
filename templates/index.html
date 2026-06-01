@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deassignment - Automated Assignment Maker</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="background-effects">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar glass-panel">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-color);">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>
+                <h2>Deassignment</h2>
+            </div>
+            
+            <ul class="step-indicator">
+                <li class="step-item active" data-step="1">
+                    <span class="step-num">1</span>
+                    <span class="step-text">System Check</span>
+                </li>
+                <li class="step-item" data-step="2">
+                    <span class="step-num">2</span>
+                    <span class="step-text">Configuration</span>
+                </li>
+                <li class="step-item" data-step="3">
+                    <span class="step-num">3</span>
+                    <span class="step-text">Template Upload</span>
+                </li>
+                <li class="step-item" data-step="4">
+                    <span class="step-num">4</span>
+                    <span class="step-text">AI Prompt Generation</span>
+                </li>
+                <li class="step-item" data-step="5">
+                    <span class="step-num">5</span>
+                    <span class="step-text">Pre-flight Checklist</span>
+                </li>
+                <li class="step-item" data-step="6">
+                    <span class="step-num">6</span>
+                    <span class="step-text">Processing</span>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="wizard-content glass-panel">
+            
+            <!-- STEP 1: System Check -->
+            <section class="wizard-step active" id="step-1">
+                <div class="step-header">
+                    <h2>Welcome to Deassignment</h2>
+                    <p class="subtitle">Let's check if your system is ready for automation.</p>
+                </div>
+                
+                <div class="system-check-grid" id="system-checks">
+                    <div class="check-card loading">
+                        <div class="check-icon"></div>
+                        <div class="check-info">
+                            <h3>Checking Requirements...</h3>
+                            <p>Please wait.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-actions">
+                    <button class="btn btn-primary" id="btn-next-1" disabled>Continue <span class="arrow">→</span></button>
+                </div>
+            </section>
+
+            <!-- STEP 2: Configuration -->
+            <section class="wizard-step" id="step-2">
+                <div class="step-header">
+                    <h2>Configuration</h2>
+                    <p class="subtitle">Tell us about the assignment you're building.</p>
+                </div>
+
+                <form id="config-form" class="form-grid">
+                    <div class="form-group">
+                        <label>Programming Language</label>
+                        <select name="language" required>
+                            <option value="python">Python</option>
+                            <option value="c">C</option>
+                            <option value="cpp">C++</option>
+                            <option value="java">Java</option>
+                            <option value="javascript">JavaScript (Node.js)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Total Questions</label>
+                        <input type="number" name="total_questions" min="1" max="100" value="10" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>AI Prompting Mode</label>
+                        <div class="radio-cards">
+                            <label class="radio-card">
+                                <input type="radio" name="mode" value="all_at_once" checked>
+                                <div class="card-content">
+                                    <h4>All at once</h4>
+                                    <p>Best for 15 questions or fewer.</p>
+                                </div>
+                            </label>
+                            <label class="radio-card">
+                                <input type="radio" name="mode" value="step_by_step">
+                                <div class="card-content">
+                                    <h4>Step by step</h4>
+                                    <p>Reduces hallucination for large assignments.</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group step-by-step-options hidden">
+                        <label>Batch Size (Questions per prompt)</label>
+                        <input type="range" name="batch_size" min="5" max="25" value="10" oninput="this.nextElementSibling.value = this.value">
+                        <output>10</output>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Desktop Switching Shortcuts (Linux)</label>
+                        <div class="shortcut-inputs">
+                            <div class="input-group">
+                                <span>Left Desktop</span>
+                                <input type="text" name="shortcut_left" value="ctrl+shift+Left" placeholder="e.g. ctrl+shift+Left">
+                            </div>
+                            <div class="input-group">
+                                <span>Right Desktop</span>
+                                <input type="text" name="shortcut_right" value="ctrl+shift+Right" placeholder="e.g. ctrl+shift+Right">
+                            </div>
+                        </div>
+                        <p class="help-text">Default shortcuts for your desktop environment. <strong>Note:</strong> If your shortcut uses the Windows key, write it as <code>super</code> or <code>meta</code> (e.g. <code>super+Right</code>).</p>
+                    </div>
+                </form>
+
+                <div class="step-actions">
+                    <button class="btn btn-secondary btn-prev">← Back</button>
+                    <button class="btn btn-primary btn-next" id="btn-next-2">Next Step →</button>
+                </div>
+            </section>
+
+            <!-- STEP 3: Template Upload -->
+            <section class="wizard-step" id="step-3">
+                <div class="step-header">
+                    <h2>PPT Template</h2>
+                    <p class="subtitle">Upload the blank presentation template.</p>
+                </div>
+
+                <div class="upload-zone" id="drop-zone">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <h3>Drag & Drop your .pptx file here</h3>
+                    <p>or click to browse</p>
+                    <input type="file" id="template-upload" accept=".pptx" hidden>
+                </div>
+
+                <div id="upload-status" class="status-message"></div>
+
+                <div class="alert alert-info mt-4">
+                    <strong>Note:</strong> We will use the <strong>last slide</strong> of your presentation as the template for all generated content.
+                </div>
+
+                <div class="step-actions">
+                    <button class="btn btn-secondary btn-prev">← Back</button>
+                    <button class="btn btn-primary btn-next" id="btn-next-3" disabled>Next Step →</button>
+                </div>
+            </section>
+
+            <!-- STEP 4: AI Prompt Generation -->
+            <section class="wizard-step" id="step-4">
+                <div class="step-header">
+                    <h2>AI Integration</h2>
+                    <p class="subtitle">Copy the prompt, paste it to your AI chatbot, and paste the response back here.</p>
+                </div>
+
+                <div class="split-layout">
+                    <!-- Left: Prompt Generator -->
+                    <div class="prompt-section">
+                        <div class="header-with-action">
+                            <h3>Prompt <span id="prompt-counter" class="badge">1 of 1</span></h3>
+                            <button class="btn-icon" id="copy-prompt-btn" title="Copy to clipboard">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
+                        </div>
+                        <pre class="code-block" id="prompt-display">Loading...</pre>
+                        
+                        <div id="step-by-step-controls" class="hidden mt-3">
+                            <button class="btn btn-secondary btn-sm" id="btn-next-prompt">View Next Prompt</button>
+                            <p class="help-text text-sm">Wait until you've received and pasted the response for this prompt before viewing the next one.</p>
+                        </div>
+                    </div>
+
+                    <!-- Right: Response input -->
+                    <div class="response-section">
+                        <h3>Paste AI Response</h3>
+                        <textarea id="ai-response" placeholder="Paste the Markdown response from the AI here..."></textarea>
+                        
+                        <div class="response-status mt-2">
+                            <span id="validation-msg"></span>
+                        </div>
+                        
+                        <div class="progress-bar-container mt-3 hidden" id="questions-progress-container">
+                            <div class="progress-info">
+                                <span>Questions received: <span id="q-received">0</span>/<span id="q-total">0</span></span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="q-progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-secondary w-100 mt-3" id="btn-validate-response">Validate & Save Response</button>
+                    </div>
+                </div>
+
+                <div class="step-actions mt-4">
+                    <button class="btn btn-secondary btn-prev">← Back</button>
+                    <button class="btn btn-primary btn-next" id="btn-next-4" disabled>Next Step →</button>
+                </div>
+            </section>
+
+            <!-- STEP 5: Pre-flight Checklist -->
+            <section class="wizard-step" id="step-5">
+                <div class="step-header">
+                    <h2>Ready to Launch?</h2>
+                    <p class="subtitle">Please confirm these items before we take over your mouse and keyboard.</p>
+                </div>
+
+                <div class="checklist">
+                    <label class="checklist-item">
+                        <input type="checkbox" class="flight-check">
+                        <div class="check-content">
+                            <h4>VSCode is Open</h4>
+                            <p>Ensure Visual Studio Code is open on the adjacent virtual desktop.</p>
+                        </div>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox" class="flight-check">
+                        <div class="check-content">
+                            <h4>Terminal is Ready</h4>
+                            <p>Ensure the integrated terminal in VSCode is open and working.</p>
+                        </div>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox" class="flight-check">
+                        <div class="check-content">
+                            <h4>No Unsaved Work</h4>
+                            <p>We will be simulating keyboard shortcuts. Unsaved work might interfere.</p>
+                        </div>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox" class="flight-check">
+                        <div class="check-content">
+                            <h4>Hands Off!</h4>
+                            <p>Once started, do not touch your mouse or keyboard until processing completes or you hit Pause.</p>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="alert alert-warning mt-4">
+                    <strong>Critical:</strong> The tool will automatically switch desktops, open files, run commands, and take screenshots.
+                </div>
+
+                <div class="step-actions">
+                    <button class="btn btn-secondary btn-prev">← Back</button>
+                    <button class="btn btn-accent" id="btn-start-pipeline" disabled>🚀 Start Automation</button>
+                </div>
+            </section>
+
+            <!-- STEP 6: Processing -->
+            <section class="wizard-step" id="step-6">
+                <div class="step-header text-center">
+                    <h2 id="processing-title">Automation Running</h2>
+                    <p class="subtitle" id="processing-subtitle">Please do not interact with your computer.</p>
+                </div>
+
+                <div class="processing-container">
+                    <div class="circular-progress">
+                        <svg viewBox="0 0 100 100">
+                            <circle class="bg" cx="50" cy="50" r="45"></circle>
+                            <circle class="progress" cx="50" cy="50" r="45" id="main-progress-circle"></circle>
+                        </svg>
+                        <div class="percentage" id="progress-percentage">0%</div>
+                    </div>
+
+                    <div class="current-action glass-card mt-4">
+                        <h4 id="current-question">Question -</h4>
+                        <p id="current-task" class="pulse-text">Initializing...</p>
+                    </div>
+
+                    <div class="controls mt-4 text-center">
+                        <button class="btn btn-secondary" id="btn-pause"><span class="icon">⏸</span> Pause</button>
+                        <button class="btn btn-danger ml-2" id="btn-cancel"><span class="icon">⏹</span> Cancel</button>
+                    </div>
+                </div>
+                
+                <div id="completion-state" class="hidden text-center mt-5">
+                    <div class="success-icon mb-3">✅</div>
+                    <h3>Assignment Complete!</h3>
+                    <p class="mb-4">Your presentation has been generated successfully.</p>
+                    <a href="#" class="btn btn-primary" id="download-btn">Download Presentation</a>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Confetti script for completion -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
