@@ -85,6 +85,10 @@ class BaseAutomator:
     def simulate_enter(self):
         """Simulate pressing Enter. Subclasses implement this."""
         raise NotImplementedError()
+
+    def simulate_typing(self, text: str):
+        """Simulate typing text character by character. Subclasses implement this."""
+        raise NotImplementedError()
         
     def close_terminal(self):
         """Close the integrated terminal by sending 'exit' and Enter."""
@@ -181,6 +185,14 @@ class X11Automator(BaseAutomator):
 
     def simulate_enter(self):
         self._run(["xdotool", "key", "Return"])
+
+    def simulate_typing(self, text: str):
+        logger.debug(f"X11: Typing {len(text)} characters")
+        proc = subprocess.Popen(
+            ["xdotool", "type", "--delay", "50", "--file", "-"],
+            stdin=subprocess.PIPE
+        )
+        proc.communicate(input=text.encode())
 
     def close_active_tab(self):
         logger.debug("Closing active tab: Ctrl+W")
@@ -301,6 +313,15 @@ class WaylandAutomator(BaseAutomator):
     def simulate_enter(self):
         """Simulate Enter key"""
         self._ydotool_combo(28)  # ENTER
+
+    def simulate_typing(self, text: str):
+        """Type text using ydotool type via stdin"""
+        logger.debug(f"Wayland: Typing {len(text)} characters")
+        proc = subprocess.Popen(
+            ["ydotool", "type", "-d", "50", "-f", "-"],
+            stdin=subprocess.PIPE
+        )
+        proc.communicate(input=text.encode())
 
     def close_active_tab(self):
         """Close active tab: Ctrl+W"""

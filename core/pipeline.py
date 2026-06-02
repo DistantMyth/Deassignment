@@ -156,6 +156,19 @@ class Pipeline:
                 if self._check_cancelled():
                     progress_callback({"status": "cancelled", "message": "Processing cancelled."})
                     return
+
+                # Simulate typing if there is input
+                if q.get("has_input", False) and q.get("sample_input", ""):
+                    progress_callback({"status": "processing", "question": q_num, "total": total, "action": "Simulating typing input..."})
+                    logger.info("Waiting 1s for program to start, then typing input")
+                    if not self._wait_with_cancel(1.0, progress_callback):
+                        return
+                    
+                    sample_input = q.get("sample_input", "")
+                    if not sample_input.endswith('\n'):
+                        sample_input += '\n'
+                        
+                    self.automator.simulate_typing(sample_input)
                 
                 # Wait for execution
                 exec_timeout = self.config.get("execution_timeout", defaults.EXECUTION_TIMEOUT)

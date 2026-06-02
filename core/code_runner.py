@@ -31,15 +31,9 @@ class CodeRunner:
         )
         
         if has_input and sample_input:
-            # We use xclip to copy input and then xdotool to paste it after running
-            # OR we can just pipe it directly if we are running in terminal
-            # Piping is cleaner but doesn't look as nice in terminal output for the screenshot.
-            # Using heredoc `<<EOF` is best as it shows the input being typed.
-            # However, for simplicity and cross-shell compat, pipe `echo -e` is safest.
-            
-            # Format sample input for echo (escape newlines)
-            safe_input = sample_input.replace('\n', '\\n').replace('"', '\\"')
-            run_cmd = f'echo -e "{safe_input}" | {run_cmd}'
+            # We no longer pipe input via shell (e.g., echo "..." | java ...).
+            # Instead, the pipeline will simulate actual keystrokes after starting the program.
+            pass
             
         commands.append(run_cmd)
         
