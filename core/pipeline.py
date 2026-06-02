@@ -97,11 +97,7 @@ class Pipeline:
                     "action": f"Creating PPT slides for Question {q_num}..."
                 })
                 
-                # 1. PPT Question Slide
-                logger.info("Creating question slide")
-                self.ppt_engine.add_question_slide(q_num, statement)
-                
-                # 2. PPT Code Slide
+                # 1. PPT Code Slide (Now contains question statement as well)
                 logger.info("Creating code slide with syntax highlighting")
                 self.ppt_engine.add_code_slide(q_num, statement, code, self.language, self.temp_dir)
                 

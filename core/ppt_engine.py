@@ -88,41 +88,70 @@ class PPTEngine:
 
     def add_code_slide(self, q_num: int, q_statement: str, code: str, language: str, temp_dir: str):
         """
-        Adds slide(s) containing the code.
+        Adds slide(s) containing the code and the question statement.
         If code is too long, splits it across multiple slides.
         """
         # 1. Render entire code to image
         code_img_path = os.path.join(temp_dir, f"code_{q_num}.png")
         self._code_to_image(code, language, code_img_path)
         
-        # 2. Add to slide
+        # 2. Setup the first slide with the full question statement
         slide = self._duplicate_template_slide()
-        header_bottom = self._add_header_to_slide(slide, f"Question {q_num} (Code):")
+        header_text = f"Question {q_num}:\n{q_statement}"
+        header_bottom = self._add_header_to_slide(slide, header_text)
         
         left = Inches(self.config.get("safe_zone_left", 0.5))
         top = header_bottom + Inches(0.2)
         
         max_width = self.prs.slide_width - Inches(self.config.get("safe_zone_left", 0.5) + self.config.get("safe_zone_right", 0.5))
         max_height = self.prs.slide_height - top - Inches(self.config.get("safe_zone_bottom", 1.0))
-
-        # Check aspect ratio to see if it fits
+        
         with Image.open(code_img_path) as img:
             img_w, img_h = img.size
             
-        # In a more advanced implementation, we would crop the image or split the text
-        # if it exceeds max_height. For now, we will let PowerPoint scale it down to fit.
-        # It will maintain aspect ratio if we only specify width.
-        
-        aspect = img_h / img_w
-        target_width = max_width
-        calc_height = int(target_width * aspect)
-        
-        if calc_height > max_height:
-            # Constrain by height instead
-            slide.shapes.add_picture(code_img_path, left, top, height=max_height)
-        else:
-            # Constrain by width
-            slide.shapes.add_picture(code_img_path, left, top, width=max_width)
+            # Calculate rendering scale (assume 96 DPI natively = 9525 EMUs per pixel)
+            EMUS_PER_PIXEL = 9525
+            
+            rendered_w = img_w * EMUS_PER_PIXEL
+            if rendered_w > max_width:
+                rendered_w = max_width
+                
+            scale = rendered_w / (img_w * EMUS_PER_PIXEL)
+            rendered_h_full = img_h * EMUS_PER_PIXEL * scale
+            
+            if rendered_h_full <= max_height:
+                slide.shapes.add_picture(code_img_path, left, top, width=rendered_w)
+            else:
+                # Image is too tall, we need to crop and spill over to new slides
+                y_offset = 0
+                slide_idx = 0
+                
+                while y_offset < img_h:
+                    if slide_idx == 0:
+                        current_slide = slide
+                        current_max_h = max_height
+                        current_top = top
+                    else:
+                        current_slide = self._duplicate_template_slide()
+                        h_bottom = self._add_header_to_slide(current_slide, f"")
+                        current_top = h_bottom + Inches(0.2)
+                        current_max_h = self.prs.slide_height - current_top - Inches(self.config.get("safe_zone_bottom", 1.0))
+                        
+                    # How many pixels can fit in the available height?
+                    px_to_fit = int(current_max_h / (EMUS_PER_PIXEL * scale))
+                    
+                    if px_to_fit <= 50:
+                        px_to_fit = 200 # Fallback to prevent infinite loop
+                        
+                    crop_box = (0, y_offset, img_w, min(y_offset + px_to_fit, img_h))
+                    cropped = img.crop(crop_box)
+                    chunk_path = os.path.join(temp_dir, f"code_chunk_{q_num}_{slide_idx}.png")
+                    cropped.save(chunk_path)
+                    
+                    current_slide.shapes.add_picture(chunk_path, left, current_top, width=rendered_w)
+                    
+                    y_offset += px_to_fit
+                    slide_idx += 1
 
     def add_screenshot_slide(self, q_num: int, screenshot_path: str):
         """Adds a slide containing the execution screenshot."""
