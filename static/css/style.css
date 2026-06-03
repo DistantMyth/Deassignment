@@ -681,6 +681,16 @@ textarea {
     color: #6ee7b7;
 }
 
+.display-server-badge.macos .badge-dot {
+    background: #60a5fa;
+    box-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
+}
+
+.display-server-badge.macos {
+    border-color: rgba(96, 165, 250, 0.3);
+    color: #93c5fd;
+}
+
 /* Config Restored Message */
 .config-restored-msg {
     display: inline-block;

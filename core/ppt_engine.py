@@ -36,6 +36,22 @@ class PPTEngine:
         "monospace",
     ]
 
+    # macOS-specific font candidates (Menlo is always available on macOS)
+    _MACOS_MONO_FONT_CANDIDATES = [
+        "DejaVu Sans Mono",
+        "Menlo",
+        "Monaco",
+        "Courier New",
+        "Courier",
+    ]
+
+    # Common macOS font directories
+    _MACOS_FONT_DIRS = [
+        "/System/Library/Fonts",
+        "/Library/Fonts",
+        os.path.expanduser("~/Library/Fonts"),
+    ]
+
     _resolved_font = None  # Class-level cache so we only resolve once
 
     def __init__(self, template_path: str, config: dict):
@@ -54,7 +70,17 @@ class PPTEngine:
         
     @classmethod
     def _detect_mono_font(cls) -> str:
-        """Find the first available monospace font on the system using fc-list."""
+        """Find the first available monospace font on the system.
+
+        On macOS: checks font directories directly and uses macOS-specific candidates.
+        On Linux: uses fc-list (fontconfig) with fallback to PIL font loading.
+        """
+        import sys
+
+        if sys.platform == 'darwin':
+            return cls._detect_mono_font_macos()
+
+        # Linux: use fc-list
         for font_name in cls._MONO_FONT_CANDIDATES:
             try:
                 result = subprocess.run(
@@ -88,6 +114,43 @@ class PPTEngine:
             "or sudo dnf install dejavu-sans-mono-fonts"
         )
         return ""
+
+    @classmethod
+    def _detect_mono_font_macos(cls) -> str:
+        """macOS-specific font detection.
+
+        Checks system font directories and uses macOS-native font candidates.
+        Menlo is always present on macOS 10.6+ as a built-in monospace font.
+        """
+        for font_name in cls._MACOS_MONO_FONT_CANDIDATES:
+            # Check if font files exist in known macOS font directories
+            for font_dir in cls._MACOS_FONT_DIRS:
+                if not os.path.isdir(font_dir):
+                    continue
+                try:
+                    for entry in os.listdir(font_dir):
+                        # Match font name in filename (case-insensitive)
+                        entry_lower = entry.lower()
+                        font_lower = font_name.lower().replace(" ", "")
+                        if font_lower in entry_lower and entry_lower.endswith(('.ttf', '.ttc', '.otf')):
+                            logger.debug(f"Font '{font_name}' found at {os.path.join(font_dir, entry)}")
+                            return font_name
+                except OSError:
+                    continue
+
+            # Also try loading via PIL/Pillow as fallback
+            try:
+                from PIL import ImageFont
+                ImageFont.truetype(font_name, 16)
+                logger.debug(f"Font '{font_name}' loadable via PIL on macOS")
+                return font_name
+            except (IOError, OSError):
+                logger.debug(f"Font '{font_name}' not found on macOS")
+                continue
+
+        # Menlo should always be available — return it as ultimate macOS fallback
+        logger.warning("Using 'Menlo' as fallback monospace font on macOS")
+        return "Menlo"
 
     def _duplicate_template_slide(self):
         """

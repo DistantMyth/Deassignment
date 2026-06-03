@@ -2,7 +2,7 @@
 
 An automated, self-hosted web tool that takes programming assignment questions, generates AI prompts, and automates your entire desktop to create a polished PowerPoint presentation containing the questions, syntax-highlighted code, and execution screenshots.
 
-**Works on both X11 and Wayland.**
+**Works on Linux (X11 & Wayland) and macOS.**
 
 ## Features
 
@@ -16,7 +16,7 @@ An automated, self-hosted web tool that takes programming assignment questions, 
 
 ## Prerequisites
 
-- **Linux** (X11 or Wayland session)
+- **Linux** (X11 or Wayland session) or **macOS** (12 Monterey+)
 - **Python 3.8+**
 - **Visual Studio Code** (`code` in your PATH)
 
@@ -36,6 +36,16 @@ An automated, self-hosted web tool that takes programming assignment questions, 
 
 > **Note:** On Wayland, `ydotool` requires the `ydotoold` daemon to be running and your user must have write access to `/dev/uinput`.
 
+### macOS Requirements
+All required tools are **built-in** on macOS — no extra packages needed:
+| Tool | Purpose |
+|------|---------|
+| `osascript` | Desktop automation via AppleScript (built-in) |
+| `screencapture` | Screenshot capture (built-in) |
+| `pbcopy` | Clipboard integration (built-in) |
+
+> **Note:** On macOS, the app (Terminal/iTerm) must be granted **Accessibility permissions** in **System Settings → Privacy & Security → Accessibility** for keyboard simulation to work.
+
 ## Quick Start
 
 1. Clone or download this repository.
@@ -49,6 +59,22 @@ An automated, self-hosted web tool that takes programming assignment questions, 
    ./venv/bin/python app.py
    ```
 4. Open your browser and go to: **http://127.0.0.1:5000**
+
+### macOS Quick Start
+
+1. Clone or download this repository.
+2. Run the installation script:
+   ```bash
+   chmod +x install.sh
+   ./install.sh
+   ```
+   The script will automatically detect macOS and run the macOS-specific installer.
+3. Grant Accessibility permissions to your terminal app when prompted.
+4. Start the application:
+   ```bash
+   ./venv/bin/python app.py
+   ```
+5. Open your browser and go to: **http://127.0.0.1:5000**
 
 ## How to Use
 
@@ -156,8 +182,13 @@ Enter your shortcuts in the Configuration step.
   ```
   The app now auto-detects available monospace fonts, so this error should be rare.
 
+### macOS-Specific
+- **"Not authorized to send Apple events"**: Grant Accessibility permissions: System Settings → Privacy & Security → Accessibility → Add your terminal app.
+- **"Desktop switching doesn't work"**: Enable Mission Control shortcuts: System Settings → Desktop & Dock → Mission Control → Enable "Switch to Desktop" shortcuts, and ensure Ctrl+Left/Right are set.
+- **"screencapture fails"**: Grant Screen Recording permission: System Settings → Privacy & Security → Screen Recording → Add your terminal app.
+- **"Font not found" warnings**: macOS uses Menlo as the default monospace font. To use DejaVu Sans Mono, install it via: `brew install --cask font-dejavu-sans-mono`.
+
 ## Future Roadmap
 
-- macOS Support (via AppleScript)
 - Windows Support (via PyAutoGUI/PowerShell)
 - Direct API Integration for the AI generation step.

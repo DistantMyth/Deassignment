@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deassignment - Automated Assignment Maker</title>
-    <meta name="description" content="An automated, self-hosted tool that generates polished PowerPoint presentations from programming assignment questions with AI-powered code generation and desktop automation. Supports both X11 and Wayland.">
+    <meta name="description" content="An automated, self-hosted tool that generates polished PowerPoint presentations from programming assignment questions with AI-powered code generation and desktop automation. Supports Linux (X11 & Wayland) and macOS.">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
@@ -153,6 +153,7 @@
                             Default shortcuts for your desktop environment.
                             <strong>Tip:</strong> If your shortcut uses the Windows/Super key, write it as <code>super</code> or <code>meta</code> (e.g. <code>super+Right</code>).
                             <span id="wayland-shortcut-hint" class="hidden"><br><strong>Wayland detected:</strong> Common Wayland shortcuts use <code>super+Left</code> / <code>super+Right</code> for workspace switching.</span>
+                            <span id="macos-shortcut-hint" class="hidden"><br><strong>macOS detected:</strong> Default Mission Control shortcuts are <code>ctrl+Left</code> / <code>ctrl+Right</code> to switch Spaces. Make sure these are enabled in <strong>System Settings → Desktop & Dock → Mission Control</strong>.</span>
                         </p>
                     </div>
                 </form>
@@ -289,6 +290,10 @@
 
                 <div id="wayland-permission-alert" class="alert alert-info mt-3 hidden">
                     <strong>Wayland Mode:</strong> Make sure <code>ydotoold</code> is running and your user has access to <code>/dev/uinput</code>. If you see permission errors, run: <code>sudo usermod -aG input $USER</code> and re-login.
+                </div>
+
+                <div id="macos-permission-alert" class="alert alert-info mt-3 hidden">
+                    <strong>macOS:</strong> Ensure your terminal app has <strong>Accessibility</strong> permissions in <strong>System Settings → Privacy & Security → Accessibility</strong>. Also, verify <strong>Screen Recording</strong> permission is granted for screenshots to work correctly.
                 </div>
 
                 <div class="step-actions">

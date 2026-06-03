@@ -22,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
         taskId: null,
         evtSource: null,
         isWayland: false,
+        isMacOS: false,
+        platform: 'x11',
         displayServer: 'Unknown'
     };
 
@@ -170,9 +172,14 @@ document.addEventListener('DOMContentLoaded', () => {
         'grim': { name: 'grim', desc: 'Screenshot tool (Wayland)' },
         'ydotool_daemon': { name: 'ydotoold', desc: 'ydotool daemon service' },
         'uinput_access': { name: '/dev/uinput', desc: 'Input device access for ydotool' },
+        // macOS tools
+        'osascript': { name: 'osascript', desc: 'AppleScript automation (macOS)' },
+        'screencapture': { name: 'screencapture', desc: 'Screenshot tool (macOS)' },
+        'pbcopy': { name: 'pbcopy', desc: 'Clipboard integration (macOS)' },
+        'accessibility': { name: 'Accessibility', desc: 'System Events permission (macOS)' },
         // Common
         'vscode': { name: 'Visual Studio Code', desc: 'Code editor' },
-        'display_server': { name: 'Display Server', desc: 'X11 or Wayland session detected' },
+        'display_server': { name: 'Display Server', desc: 'Platform detected' },
     };
 
     async function runSystemChecks() {
@@ -181,20 +188,35 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             
             state.isWayland = data.is_wayland;
-            state.displayServer = data.display_server || (data.is_wayland ? 'Wayland' : 'X11');
+            state.isMacOS = data.is_macos || false;
+            state.platform = data.platform || (data.is_macos ? 'macos' : data.is_wayland ? 'wayland' : 'x11');
+            state.displayServer = data.display_server || (data.is_macos ? 'macOS' : data.is_wayland ? 'Wayland' : 'X11');
 
             // Update display server badge in sidebar
             const badgeLabel = document.getElementById('display-server-label');
             const badge = document.getElementById('display-server-badge');
             if (badgeLabel) {
                 badgeLabel.textContent = state.displayServer;
-                badge.classList.add(state.isWayland ? 'wayland' : 'x11');
+                if (state.isMacOS) {
+                    badge.classList.add('macos');
+                } else {
+                    badge.classList.add(state.isWayland ? 'wayland' : 'x11');
+                }
             }
 
-            // Show Wayland shortcut hint if on Wayland
+            // Show platform-specific shortcut hints
             if (state.isWayland) {
                 const hint = document.getElementById('wayland-shortcut-hint');
                 if (hint) hint.classList.remove('hidden');
+            }
+            if (state.isMacOS) {
+                const macHint = document.getElementById('macos-shortcut-hint');
+                if (macHint) macHint.classList.remove('hidden');
+                // Update shortcut input defaults for macOS
+                const leftInput = document.getElementById('config-shortcut-left');
+                const rightInput = document.getElementById('config-shortcut-right');
+                if (leftInput && leftInput.value === 'ctrl+shift+Left') leftInput.value = 'ctrl+Left';
+                if (rightInput && rightInput.value === 'ctrl+shift+Right') rightInput.value = 'ctrl+Right';
             }
 
             const container = document.getElementById('system-checks');
@@ -227,18 +249,29 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btn-next-1').disabled = !allPassed;
             
             if (!allPassed) {
-                const toolList = state.isWayland 
-                    ? 'ydotool, wl-clipboard, grim' 
-                    : 'xdotool, scrot, xclip';
-
-                let helpMsg = `Please install missing tools: <code>${toolList}</code>`;
-                
-                if (state.isWayland) {
-                    if (!data.checks.ydotool_daemon) {
-                        helpMsg += '<br>Start the ydotool daemon: <code>sudo systemctl enable --now ydotoold</code>';
+                let helpMsg = '';
+                if (state.isMacOS) {
+                    helpMsg = 'All macOS tools should be built-in. ';
+                    if (data.checks.accessibility === false) {
+                        helpMsg += '<br>Grant Accessibility permissions: <strong>System Settings → Privacy & Security → Accessibility</strong> → Add your terminal app.';
                     }
-                    if (data.checks.uinput_access === false) {
-                        helpMsg += '<br>Fix uinput access: <code>sudo usermod -aG input $USER</code> then re-login.';
+                    if (!data.checks.vscode) {
+                        helpMsg += '<br>Install VSCode and ensure the <code>code</code> command is in your PATH.';
+                    }
+                } else {
+                    const toolList = state.isWayland 
+                        ? 'ydotool, wl-clipboard, grim' 
+                        : 'xdotool, scrot, xclip';
+
+                    helpMsg = `Please install missing tools: <code>${toolList}</code>`;
+                    
+                    if (state.isWayland) {
+                        if (!data.checks.ydotool_daemon) {
+                            helpMsg += '<br>Start the ydotool daemon: <code>sudo systemctl enable --now ydotoold</code>';
+                        }
+                        if (data.checks.uinput_access === false) {
+                            helpMsg += '<br>Fix uinput access: <code>sudo usermod -aG input $USER</code> then re-login.';
+                        }
                     }
                 }
                 
@@ -470,6 +503,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 waylandAlert.classList.remove('hidden');
             } else {
                 waylandAlert.classList.add('hidden');
+            }
+        }
+        // Show macOS-specific permission alert
+        const macosAlert = document.getElementById('macos-permission-alert');
+        if (macosAlert) {
+            if (state.isMacOS) {
+                macosAlert.classList.remove('hidden');
+            } else {
+                macosAlert.classList.add('hidden');
             }
         }
     }

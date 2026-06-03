@@ -34,23 +34,34 @@ def index():
 @app.route('/api/preflight', methods=['GET'])
 def preflight_check():
     """Checks if system requirements are met."""
-    is_wayland = os.environ.get("XDG_SESSION_TYPE", "") == "wayland"
+    from core.platform_detect import get_platform
+    platform = get_platform()
+    is_wayland = platform == 'wayland'
+    is_macos = platform == 'macos'
     
     checks = {
-        "display_server": True,  # We support both now
+        "display_server": True,  # We support all three now
         "vscode": False
     }
     
     tools_to_check = []
-    if is_wayland:
+    if is_macos:
+        # macOS: all tools are built-in, just verify they exist
+        tools_to_check = ["osascript", "screencapture", "pbcopy"]
+        for t in tools_to_check:
+            checks[t] = False
+    elif is_wayland:
         tools_to_check = ["ydotool", "wl-copy", "grim"]
-        for t in tools_to_check: checks[t] = False
+        for t in tools_to_check:
+            checks[t] = False
     else:
         tools_to_check = ["xdotool", "scrot", "xclip"]
-        for t in tools_to_check: checks[t] = False
+        for t in tools_to_check:
+            checks[t] = False
         
     tools_to_check.append("code")
     
+    # 'which' works on both Linux and macOS
     for tool in tools_to_check:
         try:
             subprocess.run(["which", tool], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -104,12 +115,33 @@ def preflight_check():
         # Check /dev/uinput permissions
         uinput_ok = os.path.exists("/dev/uinput") and os.access("/dev/uinput", os.W_OK)
         checks["uinput_access"] = uinput_ok
+
+    # macOS-specific: check Accessibility permissions with a quick smoke test
+    if is_macos:
+        try:
+            result = subprocess.run(
+                ["osascript", "-e", 'tell application "System Events" to return name of first process'],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=5
+            )
+            checks["accessibility"] = result.returncode == 0
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            checks["accessibility"] = False
+
+    # Determine display server name
+    if is_macos:
+        display_server = "macOS"
+    elif is_wayland:
+        display_server = "Wayland"
+    else:
+        display_server = "X11"
             
     return jsonify({
         "status": "success" if all(checks.values()) else "warning",
         "checks": checks,
         "is_wayland": is_wayland,
-        "display_server": "Wayland" if is_wayland else "X11"
+        "is_macos": is_macos,
+        "platform": platform,
+        "display_server": display_server
     })
 
 

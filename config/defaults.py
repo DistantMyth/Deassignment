@@ -2,14 +2,38 @@
 Default configurations for Deassignment.
 """
 
-# Default desktop switching shortcuts (can be overridden by user)
+from core.platform_detect import get_platform
+
+# Default desktop switching shortcuts — Linux (X11)
 DEFAULT_DESKTOP_SWITCH_LEFT = "ctrl+shift+Left"
 DEFAULT_DESKTOP_SWITCH_RIGHT = "ctrl+shift+Right"
+
+# Default desktop switching shortcuts — macOS (Mission Control Spaces)
+MACOS_DEFAULT_DESKTOP_SWITCH_LEFT = "ctrl+Left"
+MACOS_DEFAULT_DESKTOP_SWITCH_RIGHT = "ctrl+Right"
 
 # VSCode defaults
 DEFAULT_VSCODE_NEW_FILE = "ctrl+n"
 DEFAULT_VSCODE_SAVE = "ctrl+s"
 DEFAULT_VSCODE_TERMINAL = "ctrl+grave"
+
+# macOS default monospace font (built-in, no install needed)
+MACOS_DEFAULT_MONO_FONT = "Menlo"
+
+
+def get_default_shortcuts() -> dict:
+    """Return platform-appropriate default desktop switching shortcuts."""
+    platform = get_platform()
+    if platform == 'macos':
+        return {
+            "shortcut_left": MACOS_DEFAULT_DESKTOP_SWITCH_LEFT,
+            "shortcut_right": MACOS_DEFAULT_DESKTOP_SWITCH_RIGHT,
+        }
+    # Linux defaults (both X11 and Wayland use the same default keys)
+    return {
+        "shortcut_left": DEFAULT_DESKTOP_SWITCH_LEFT,
+        "shortcut_right": DEFAULT_DESKTOP_SWITCH_RIGHT,
+    }
 
 # Supported programming languages and their configurations
 LANGUAGES = {

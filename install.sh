@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# Detect macOS and redirect to macOS-specific installer
+if [[ "$(uname)" == "Darwin" ]]; then
+    echo "macOS detected. Running macOS installer..."
+    bash "$(dirname "$0")/install_macos.sh"
+    exit $?
+fi
+
 echo "Starting Deassignment Installation..."
 
 # 1. Check Python version
