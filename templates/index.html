@@ -152,8 +152,7 @@
                         <p class="help-text" id="shortcut-help-text">
                             Default shortcuts for your desktop environment.
                             <strong>Tip:</strong> If your shortcut uses the Windows/Super key, write it as <code>super</code> or <code>meta</code> (e.g. <code>super+Right</code>).
-                            <span id="wayland-shortcut-hint" class="hidden"><br><strong>Wayland detected:</strong> Common Wayland shortcuts use <code>super+Left</code> / <code>super+Right</code> for workspace switching.</span>
-                            <span id="macos-shortcut-hint" class="hidden"><br><strong>macOS detected:</strong> Default Mission Control shortcuts are <code>ctrl+Left</code> / <code>ctrl+Right</code> to switch Spaces. Make sure these are enabled in <strong>System Settings → Desktop & Dock → Mission Control</strong>.</span>
+                            <span id="platform-shortcut-hint" class="hidden"></span>
                         </p>
                     </div>
                 </form>
@@ -288,12 +287,7 @@
                     <strong>Critical:</strong> The tool will automatically switch desktops, open files, run commands, and take screenshots.
                 </div>
 
-                <div id="wayland-permission-alert" class="alert alert-info mt-3 hidden">
-                    <strong>Wayland Mode:</strong> Make sure <code>ydotoold</code> is running and your user has access to <code>/dev/uinput</code>. If you see permission errors, run: <code>sudo usermod -aG input $USER</code> and re-login.
-                </div>
-
-                <div id="macos-permission-alert" class="alert alert-info mt-3 hidden">
-                    <strong>macOS:</strong> Ensure your terminal app has <strong>Accessibility</strong> permissions in <strong>System Settings → Privacy & Security → Accessibility</strong>. Also, verify <strong>Screen Recording</strong> permission is granted for screenshots to work correctly.
+                <div id="platform-permission-alert" class="alert alert-info mt-3 hidden">
                 </div>
 
                 <div class="step-actions">

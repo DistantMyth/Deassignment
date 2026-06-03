@@ -205,18 +205,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Show platform-specific shortcut hints
-            if (state.isWayland) {
-                const hint = document.getElementById('wayland-shortcut-hint');
-                if (hint) hint.classList.remove('hidden');
-            }
-            if (state.isMacOS) {
-                const macHint = document.getElementById('macos-shortcut-hint');
-                if (macHint) macHint.classList.remove('hidden');
-                // Update shortcut input defaults for macOS
-                const leftInput = document.getElementById('config-shortcut-left');
-                const rightInput = document.getElementById('config-shortcut-right');
-                if (leftInput && leftInput.value === 'ctrl+shift+Left') leftInput.value = 'ctrl+Left';
-                if (rightInput && rightInput.value === 'ctrl+shift+Right') rightInput.value = 'ctrl+Right';
+            const shortcutHint = document.getElementById('platform-shortcut-hint');
+            if (shortcutHint) {
+                if (state.isWayland) {
+                    shortcutHint.innerHTML = '<br><strong>Wayland detected:</strong> Common Wayland shortcuts use <code>super+Left</code> / <code>super+Right</code> for workspace switching.';
+                    shortcutHint.classList.remove('hidden');
+                } else if (state.isMacOS) {
+                    shortcutHint.innerHTML = '<br><strong>macOS detected:</strong> Default Mission Control shortcuts are <code>ctrl+Left</code> / <code>ctrl+Right</code> to switch Spaces. Make sure these are enabled in <strong>System Settings → Desktop & Dock → Mission Control</strong>.';
+                    shortcutHint.classList.remove('hidden');
+                    
+                    // Update shortcut input defaults for macOS
+                    const leftInput = document.getElementById('config-shortcut-left');
+                    const rightInput = document.getElementById('config-shortcut-right');
+                    if (leftInput && leftInput.value === 'ctrl+shift+Left') leftInput.value = 'ctrl+Left';
+                    if (rightInput && rightInput.value === 'ctrl+shift+Right') rightInput.value = 'ctrl+Right';
+                }
             }
 
             const container = document.getElementById('system-checks');
@@ -496,22 +499,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function updatePreflightForDisplayServer() {
-        // Show Wayland-specific permission alert
-        const waylandAlert = document.getElementById('wayland-permission-alert');
-        if (waylandAlert) {
+        const platformAlert = document.getElementById('platform-permission-alert');
+        if (platformAlert) {
             if (state.isWayland) {
-                waylandAlert.classList.remove('hidden');
+                platformAlert.innerHTML = '<strong>Wayland Mode:</strong> Make sure <code>ydotoold</code> is running and your user has access to <code>/dev/uinput</code>. If you see permission errors, run: <code>sudo usermod -aG input $USER</code> and re-login.';
+                platformAlert.classList.remove('hidden');
+            } else if (state.isMacOS) {
+                platformAlert.innerHTML = '<strong>macOS:</strong> Ensure your terminal app has <strong>Accessibility</strong> permissions in <strong>System Settings → Privacy & Security → Accessibility</strong>. Also, verify <strong>Screen Recording</strong> permission is granted for screenshots to work correctly.';
+                platformAlert.classList.remove('hidden');
             } else {
-                waylandAlert.classList.add('hidden');
-            }
-        }
-        // Show macOS-specific permission alert
-        const macosAlert = document.getElementById('macos-permission-alert');
-        if (macosAlert) {
-            if (state.isMacOS) {
-                macosAlert.classList.remove('hidden');
-            } else {
-                macosAlert.classList.add('hidden');
+                platformAlert.classList.add('hidden');
             }
         }
     }

@@ -8,48 +8,16 @@ An automated, self-hosted web tool that takes programming assignment questions, 
 
 - 🪄 **Wizard UI**: A beautiful, step-by-step interface to guide you through the process.
 - 🤖 **AI Prompt Generation**: Automatically creates prompts for ChatGPT, Claude, or Gemini in "All at once" or "Step-by-step" modes (to prevent hallucination on large assignments).
-- 🖥️ **Full Desktop Automation**: Supports **both X11** (`xdotool`) **and Wayland** (`ydotool`) — switches virtual desktops, focuses VSCode, opens files, runs commands, and takes screenshots.
+- 🖥️ **Full Desktop Automation**: Supports **X11**, **Wayland**, and **macOS** natively — switches virtual desktops, focuses VSCode, opens files, runs commands, and takes screenshots.
 - 🖼️ **Syntax Highlighting**: Uses `Pygments` to render your code into beautiful, presentation-ready images with automatic font detection and fallback.
 - 📊 **PPTX Generation**: Clones the last slide of your provided template and formats the questions, code, and screenshots perfectly within the safe zones.
 - ⚡ **Real-time Progress**: Watch the automation happen with live Server-Sent Events (SSE) updates in the browser.
 - 💾 **Config Persistence**: Your settings (language, shortcuts, batch size) are remembered across sessions.
 
-## Prerequisites
-
-- **Linux** (X11 or Wayland session) or **macOS** (12 Monterey+)
-- **Python 3.8+**
-- **Visual Studio Code** (`code` in your PATH)
-
-### X11 Requirements
-| Tool | Purpose |
-|------|---------|
-| `xdotool` | Desktop automation (window focus, keyboard simulation) |
-| `scrot` | Screenshot capture |
-| `xclip` | Clipboard integration |
-
-### Wayland Requirements
-| Tool | Purpose |
-|------|---------|
-| `ydotool` + `ydotoold` | Desktop automation (keyboard/mouse via uinput) |
-| `wl-clipboard` (`wl-copy`) | Clipboard integration |
-| `grim` | Screenshot capture |
-
-> **Note:** On Wayland, `ydotool` requires the `ydotoold` daemon to be running and your user must have write access to `/dev/uinput`.
-
-### macOS Requirements
-All required tools are **built-in** on macOS — no extra packages needed:
-| Tool | Purpose |
-|------|---------|
-| `osascript` | Desktop automation via AppleScript (built-in) |
-| `screencapture` | Screenshot capture (built-in) |
-| `pbcopy` | Clipboard integration (built-in) |
-
-> **Note:** On macOS, the app (Terminal/iTerm) must be granted **Accessibility permissions** in **System Settings → Privacy & Security → Accessibility** for keyboard simulation to work.
-
 ## Quick Start
 
 1. Clone or download this repository.
-2. Run the installation script (this will create a virtual environment, install Python packages, and set up the required system tools):
+2. Run the installation script. The script automatically detects your OS and installs the required packages and sets up the Python virtual environment:
    ```bash
    chmod +x install.sh
    ./install.sh
@@ -60,26 +28,34 @@ All required tools are **built-in** on macOS — no extra packages needed:
    ```
 4. Open your browser and go to: **http://127.0.0.1:5000**
 
-### macOS Quick Start
+## Platform Setup & Permissions
 
-1. Clone or download this repository.
-2. Run the installation script:
-   ```bash
-   chmod +x install.sh
-   ./install.sh
-   ```
-   The script will automatically detect macOS and run the macOS-specific installer.
-3. Grant Accessibility permissions to your terminal app when prompted.
-4. Start the application:
-   ```bash
-   ./venv/bin/python app.py
-   ```
-5. Open your browser and go to: **http://127.0.0.1:5000**
+Deassignment uses native tools for your specific display server or OS. Review the requirements and setup for your platform:
+
+### macOS (12 Monterey+)
+All required tools are **built-in** (`osascript`, `screencapture`, `pbcopy`).
+- **Permissions**: You MUST grant **Accessibility** and **Screen Recording** permissions to your terminal app (e.g., Terminal, iTerm2) in **System Settings → Privacy & Security**. Without Accessibility, keyboard simulation will fail.
+- **Shortcuts**: Enable Mission Control desktop switching in **System Settings → Desktop & Dock → Mission Control**. The defaults are usually `Ctrl+Left` and `Ctrl+Right`.
+
+### Linux (Wayland)
+Requires `ydotool`, `wl-clipboard`, and `grim`.
+- **ydotoold daemon**: The `ydotoold` daemon must be running (`sudo systemctl enable --now ydotoold`).
+- **Permissions**: Your user must have write access to `/dev/uinput`. To do this, add yourself to the input group:
+  ```bash
+  sudo usermod -aG input $USER
+  ```
+  *(Remember to log out and log back in for group changes to take effect).*
+- **Shortcuts**: Common Wayland shortcuts use the Super/Meta key (e.g., `super+Left`, `super+Right`).
+
+### Linux (X11)
+Requires `xdotool`, `scrot`, and `xclip`.
+- Usually, these work out of the box without special daemons or permissions.
+- **Shortcuts**: Usually `ctrl+alt+Left/Right` or `ctrl+shift+Left/Right`.
 
 ## How to Use
 
 ### 1. System Check
-The app will verify you have the required tools installed. It auto-detects whether you're running X11 or Wayland and checks for the appropriate tools. If anything fails, follow the on-screen instructions.
+The app will verify you have the required tools installed. It auto-detects your platform and checks for the appropriate tools. If anything fails, follow the on-screen instructions.
 
 ### 2. Configuration
 - Select your programming language (Python, C, C++, Java, JS).
@@ -108,85 +84,27 @@ Before you start, make sure:
 Click **Start Automation** and **TAKE YOUR HANDS OFF THE KEYBOARD AND MOUSE**.
 The tool will take over, write the code, run it, take screenshots, and compile the presentation. You can watch the progress live in your browser.
 
-## Wayland Setup Guide
-
-If you're on Wayland (GNOME 43+, KDE Plasma 6, Sway, Hyprland, etc.), you need a few extra steps:
-
-### 1. Install Dependencies
-```bash
-# Fedora
-sudo dnf install ydotool wl-clipboard grim
-
-# Ubuntu/Debian
-sudo apt install ydotool wl-clipboard grim
-
-# Arch
-sudo pacman -S ydotool wl-clipboard grim
-```
-
-### 2. Start the ydotoold Daemon
-```bash
-sudo systemctl enable --now ydotoold
-```
-
-### 3. Set Up /dev/uinput Permissions
-```bash
-# Add your user to the input group
-sudo usermod -aG input $USER
-
-# Create a udev rule (one-time)
-echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/80-uinput.rules
-sudo udevadm control --reload-rules && sudo udevadm trigger
-
-# Log out and back in for group changes to take effect
-```
-
-### 4. Desktop Shortcuts
-Common Wayland desktop switching shortcuts:
-- **GNOME:** `super+Left` / `super+Right` (with workspaces set to horizontal)
-- **KDE Plasma:** `meta+Left` / `meta+Right`
-- **Sway/Hyprland:** Custom key bindings (check your config)
-
-Enter your shortcuts in the Configuration step.
-
 ## Troubleshooting
 
 ### General
 - **"xdotool fails to type code correctly"**: We solved this! The app now writes files directly to disk and opens them, avoiding typing simulation issues entirely.
-- **"Screenshots show the wrong window"**: Make sure you leave your mouse alone during execution. `scrot -u` captures the currently focused window.
+- **"Screenshots show the wrong window"**: Make sure you leave your mouse alone during execution. The tools capture the currently focused window.
 - **"VSCode terminal isn't opening"**: Ensure your VSCode terminal shortcut is `ctrl+` (backtick) or update the setting in `config/defaults.py`.
 - **"Code runs but closes immediately / no screenshot"**: You can increase the `EXECUTION_TIMEOUT` in `config/defaults.py`.
 
-### Wayland-Specific
+### macOS
+- **"Not authorized to send Apple events"**: Grant Accessibility permissions: System Settings → Privacy & Security → Accessibility → Add your terminal app.
+- **"Desktop switching doesn't work"**: Enable Mission Control shortcuts: System Settings → Desktop & Dock → Mission Control → Enable "Switch to Desktop" shortcuts, and ensure Ctrl+Left/Right are set.
+- **"screencapture fails"**: Grant Screen Recording permission: System Settings → Privacy & Security → Screen Recording → Add your terminal app.
+- **"Font not found" warnings**: macOS uses Menlo as the default monospace font. To use DejaVu Sans Mono, install it via: `brew install --cask font-dejavu-sans-mono`.
+
+### Wayland
 - **"ydotool: command failed (exit code 2)"**: This is a permissions issue. Make sure:
   1. `ydotoold` daemon is running: `sudo systemctl status ydotoold`
   2. Your user is in the `input` group: `groups $USER`
   3. `/dev/uinput` is writable: `ls -la /dev/uinput`
   4. You logged out and back in after adding yourself to the group.
-
-- **"ydotoold is not starting automatically"**: The app will attempt to auto-start it, but if that fails:
-  ```bash
-  sudo systemctl enable --now ydotoold
-  ```
-
-- **"No usable fonts named: DejaVu Sans Mono"**: Install the font:
-  ```bash
-  # Fedora
-  sudo dnf install dejavu-sans-mono-fonts
-  
-  # Ubuntu/Debian
-  sudo apt install fonts-dejavu-core
-  
-  # Arch
-  sudo pacman -S ttf-dejavu
-  ```
-  The app now auto-detects available monospace fonts, so this error should be rare.
-
-### macOS-Specific
-- **"Not authorized to send Apple events"**: Grant Accessibility permissions: System Settings → Privacy & Security → Accessibility → Add your terminal app.
-- **"Desktop switching doesn't work"**: Enable Mission Control shortcuts: System Settings → Desktop & Dock → Mission Control → Enable "Switch to Desktop" shortcuts, and ensure Ctrl+Left/Right are set.
-- **"screencapture fails"**: Grant Screen Recording permission: System Settings → Privacy & Security → Screen Recording → Add your terminal app.
-- **"Font not found" warnings**: macOS uses Menlo as the default monospace font. To use DejaVu Sans Mono, install it via: `brew install --cask font-dejavu-sans-mono`.
+- **"No usable fonts named: DejaVu Sans Mono"**: The app auto-detects monospace fonts, but you can install it via your package manager (e.g. `sudo dnf install dejavu-sans-mono-fonts`).
 
 ## Future Roadmap
 
