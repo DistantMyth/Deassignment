@@ -50,15 +50,21 @@ class WaylandScreenshot:
     @staticmethod
     def capture_active_window(output_path: str) -> bool:
         logger.info(f"Capturing Wayland screenshot to: {output_path}")
+        
+        # Strategy 1: grim (works on wlroots based compositors like Sway, Hyprland, and some KDE)
         try:
-            # Capture the full screen since getting active window geometry
-            # requires compositor-specific IPC (swaymsg, hyprctl, etc.)
             subprocess.run(["grim", output_path], check=True, stderr=subprocess.PIPE)
             logger.info("Full-screen screenshot captured via grim")
             return True
-        except subprocess.CalledProcessError as e:
-            logger.error(f"grim failed: {e.stderr.decode()}")
-            return False
-        except FileNotFoundError:
-            logger.error("grim is not installed!")
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            logger.debug(f"grim failed or not found: {e}. Trying GNOME fallback...")
+            
+        # Strategy 2: gnome-screenshot (works on GNOME Wayland if installed)
+        try:
+            subprocess.run(["gnome-screenshot", "-f", output_path], check=True, stderr=subprocess.PIPE)
+            logger.info("Screenshot captured via gnome-screenshot fallback")
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            logger.error(f"gnome-screenshot failed or not found: {e}")
+            logger.error("Wayland screenshot failed. If you are on GNOME, try installing 'gnome-screenshot' or switch to an X11 session.")
             return False

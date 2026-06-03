@@ -108,6 +108,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    justify-content: flex-start;
 }
 
 .logo {
@@ -584,7 +585,7 @@ textarea {
 .mb-3 { margin-bottom: 1rem; }
 .mb-4 { margin-bottom: 1.5rem; }
 .w-100 { width: 100%; }
-.text-center { text-center: center; }
+.text-center { text-align: center; }
 .text-sm { font-size: 0.85rem; }
 
 .alert {
@@ -630,4 +631,103 @@ textarea {
     font-size: 0.85rem;
     margin-bottom: 0.25rem;
     color: var(--text-muted);
+}
+
+/* Sidebar Footer - Display Server Badge */
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--panel-border);
+}
+
+.display-server-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--panel-border);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    transition: var(--transition);
+}
+
+.badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: var(--transition);
+}
+
+.display-server-badge.wayland .badge-dot {
+    background: #a78bfa;
+    box-shadow: 0 0 8px rgba(167, 139, 250, 0.5);
+}
+
+.display-server-badge.x11 .badge-dot {
+    background: var(--success);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.display-server-badge.wayland {
+    border-color: rgba(167, 139, 250, 0.3);
+    color: #c4b5fd;
+}
+
+.display-server-badge.x11 {
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #6ee7b7;
+}
+
+/* Config Restored Message */
+.config-restored-msg {
+    display: inline-block;
+    font-size: 0.85rem;
+    color: var(--success);
+    margin-left: 0.5rem;
+    opacity: 1;
+    transition: opacity 1s ease;
+}
+
+.config-restored-msg.fade-out {
+    opacity: 0;
+}
+
+/* Shortcut inputs grid */
+.shortcut-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.input-group span {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.help-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    line-height: 1.5;
+}
+
+.help-text code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+}
+
+.ml-2 {
+    margin-left: 0.5rem;
 }

@@ -177,7 +177,7 @@ class Pipeline:
                 progress_callback({"status": "processing", "question": q_num, "total": total, "action": "Capturing screenshot..."})
                 screenshot_path = os.path.join(self.temp_dir, f"screenshot_{q_num}.png")
                 logger.info(f"Taking screenshot: {screenshot_path}")
-                self.screenshotter.capture_active_window(screenshot_path)
+                capture_success = self.screenshotter.capture_active_window(screenshot_path)
                 
                 if self._check_cancelled():
                     progress_callback({"status": "cancelled", "message": "Processing cancelled."})
@@ -194,9 +194,18 @@ class Pipeline:
                 self.automator.switch_desktop_back()
                 
                 # 5. PPT Screenshot Slide
-                progress_callback({"status": "processing", "question": q_num, "total": total, "action": "Adding screenshot to PPT..."})
-                logger.info("Adding screenshot slide to PPT")
-                self.ppt_engine.add_screenshot_slide(q_num, screenshot_path)
+                if capture_success and os.path.exists(screenshot_path):
+                    progress_callback({"status": "processing", "question": q_num, "total": total, "action": "Adding screenshot to PPT..."})
+                    logger.info("Adding screenshot slide to PPT")
+                    self.ppt_engine.add_screenshot_slide(q_num, screenshot_path)
+                else:
+                    logger.warning(f"Screenshot capture failed or file missing for Question {q_num}. Skipping screenshot slide.")
+                    progress_callback({
+                        "status": "processing", 
+                        "question": q_num, 
+                        "total": total, 
+                        "action": "Screenshot failed (Wayland compositor restriction?). Skipping slide."
+                    })
                 
                 progress_callback({"status": "question_done", "question": q_num, "total": total})
                 logger.info(f"=== Question {q_num} complete ===")

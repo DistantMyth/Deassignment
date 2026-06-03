@@ -1,4 +1,5 @@
 import os
+import subprocess
 from copy import deepcopy
 import io
 from pptx import Presentation
@@ -12,9 +13,31 @@ from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import ImageFormatter
 
+import logging
+
+logger = logging.getLogger("deassignment.ppt")
+logger.setLevel(logging.DEBUG)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("[%(asctime)s] [PPT] %(levelname)s: %(message)s", datefmt="%H:%M:%S"))
+    logger.addHandler(handler)
+
+
 class PPTEngine:
     """Handles all PPTX generation and manipulation."""
-    
+
+    # Preferred monospace fonts in priority order
+    _MONO_FONT_CANDIDATES = [
+        "DejaVu Sans Mono",
+        "Liberation Mono",
+        "Noto Sans Mono",
+        "Courier New",
+        "Cousine",
+        "monospace",
+    ]
+
+    _resolved_font = None  # Class-level cache so we only resolve once
+
     def __init__(self, template_path: str, config: dict):
         self.prs = Presentation(template_path)
         self.config = config
@@ -23,7 +46,49 @@ class PPTEngine:
         if len(self.prs.slides) == 0:
             raise ValueError("Template presentation has no slides.")
         self.template_slide = self.prs.slides[-1]
+
+        # Resolve the monospace font once at startup
+        if PPTEngine._resolved_font is None:
+            PPTEngine._resolved_font = self._detect_mono_font()
+            logger.info(f"Resolved monospace font: '{PPTEngine._resolved_font}'")
         
+    @classmethod
+    def _detect_mono_font(cls) -> str:
+        """Find the first available monospace font on the system using fc-list."""
+        for font_name in cls._MONO_FONT_CANDIDATES:
+            try:
+                result = subprocess.run(
+                    ["fc-list", font_name],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=3
+                )
+                output = result.stdout.decode().strip()
+                if output:
+                    logger.debug(f"Font '{font_name}' found on system")
+                    return font_name
+                else:
+                    logger.debug(f"Font '{font_name}' NOT found on system")
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                # fc-list not available, try PIL/Pillow font loading
+                try:
+                    from PIL import ImageFont
+                    ImageFont.truetype(font_name, 16)
+                    logger.debug(f"Font '{font_name}' loadable via PIL")
+                    return font_name
+                except (IOError, OSError):
+                    logger.debug(f"Font '{font_name}' not loadable via PIL either")
+                    continue
+
+        # Ultimate fallback — Pygments will use its built-in default
+        logger.warning(
+            "No preferred monospace font found on system! "
+            "Pygments will fall back to its built-in default. "
+            "Install a monospace font: sudo apt install fonts-dejavu-core "
+            "or sudo dnf install dejavu-sans-mono-fonts"
+        )
+        return ""
+
     def _duplicate_template_slide(self):
         """
         Creates a new slide based on the template slide.
@@ -74,15 +139,20 @@ class PPTEngine:
     def _code_to_image(self, code: str, language: str, output_path: str):
         """Renders code to a syntax-highlighted PNG image using Pygments."""
         lexer = get_lexer_by_name(language)
-        # We use a relatively large font so it's readable on a slide
-        formatter = ImageFormatter(
+
+        # Build formatter kwargs, only set font_name if we found one
+        fmt_kwargs = dict(
             font_size=16,
-            font_name="DejaVu Sans Mono", # Or Consolas
             line_pad=6,
             image_pad=10,
             line_numbers=True,
             style=self.config.get("code_style", "monokai"),
         )
+        if PPTEngine._resolved_font:
+            fmt_kwargs["font_name"] = PPTEngine._resolved_font
+
+        formatter = ImageFormatter(**fmt_kwargs)
+
         with open(output_path, "wb") as f:
             highlight(code, lexer, formatter, outfile=f)
 

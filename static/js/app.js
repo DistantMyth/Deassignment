@@ -20,7 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPromptIndex: 0,
         parsedQuestions: [],
         taskId: null,
-        evtSource: null
+        evtSource: null,
+        isWayland: false,
+        displayServer: 'Unknown'
     };
 
     // Navigation setup
@@ -49,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Trigger specific logic for steps
         if (stepNum === 1) runSystemChecks();
         if (stepNum === 4) generatePrompts();
+        if (stepNum === 5) updatePreflightForDisplayServer();
     }
 
     // Attach Next/Prev listeners
@@ -68,6 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
         state.config.total_questions = parseInt(state.config.total_questions);
         state.config.batch_size = parseInt(state.config.batch_size);
         
+        // Save config for next session
+        saveConfig(state.config);
+        
         showStep(3);
     });
     
@@ -78,22 +84,121 @@ document.addEventListener('DOMContentLoaded', () => {
         startPipeline();
     });
 
-    // Step 1: System Checks
+    // --- Config Persistence ---
+
+    async function loadSavedConfig() {
+        try {
+            const res = await fetch('/api/config');
+            const data = await res.json();
+            
+            if (data.status === 'success' && data.config && Object.keys(data.config).length > 0) {
+                const cfg = data.config;
+                
+                // Populate form fields
+                if (cfg.language) {
+                    const langSelect = document.getElementById('config-language');
+                    if (langSelect) langSelect.value = cfg.language;
+                }
+                if (cfg.total_questions) {
+                    const totalInput = document.getElementById('config-total-questions');
+                    if (totalInput) totalInput.value = cfg.total_questions;
+                }
+                if (cfg.mode) {
+                    const modeRadio = document.querySelector(`input[name="mode"][value="${cfg.mode}"]`);
+                    if (modeRadio) {
+                        modeRadio.checked = true;
+                        // Trigger the change event to show/hide batch options
+                        modeRadio.dispatchEvent(new Event('change'));
+                    }
+                }
+                if (cfg.batch_size) {
+                    const batchInput = document.getElementById('config-batch-size');
+                    if (batchInput) {
+                        batchInput.value = cfg.batch_size;
+                        const output = batchInput.nextElementSibling;
+                        if (output) output.value = cfg.batch_size;
+                    }
+                }
+                if (cfg.shortcut_left) {
+                    const leftInput = document.getElementById('config-shortcut-left');
+                    if (leftInput) leftInput.value = cfg.shortcut_left;
+                }
+                if (cfg.shortcut_right) {
+                    const rightInput = document.getElementById('config-shortcut-right');
+                    if (rightInput) rightInput.value = cfg.shortcut_right;
+                }
+
+                // Show restored message
+                const restoredMsg = document.getElementById('config-restored-msg');
+                if (restoredMsg) {
+                    restoredMsg.classList.remove('hidden');
+                    setTimeout(() => restoredMsg.classList.add('fade-out'), 4000);
+                    setTimeout(() => restoredMsg.classList.add('hidden'), 5000);
+                }
+            }
+        } catch (e) {
+            console.log('No saved config found, using defaults.');
+        }
+    }
+
+    async function saveConfig(config) {
+        try {
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            });
+        } catch (e) {
+            console.warn('Failed to save config:', e);
+        }
+    }
+
+    // Load saved config on startup
+    loadSavedConfig();
+
+    // --- Step 1: System Checks ---
+
+    // Human-readable names for all possible check keys
+    const CHECK_NAMES = {
+        // X11 tools
+        'xdotool': { name: 'xdotool', desc: 'Desktop automation (X11)' },
+        'scrot': { name: 'scrot', desc: 'Screenshot tool (X11)' },
+        'xclip': { name: 'xclip', desc: 'Clipboard integration (X11)' },
+        // Wayland tools
+        'ydotool': { name: 'ydotool', desc: 'Desktop automation (Wayland)' },
+        'wl-copy': { name: 'wl-copy', desc: 'Clipboard integration (Wayland)' },
+        'grim': { name: 'grim', desc: 'Screenshot tool (Wayland)' },
+        'ydotool_daemon': { name: 'ydotoold', desc: 'ydotool daemon service' },
+        'uinput_access': { name: '/dev/uinput', desc: 'Input device access for ydotool' },
+        // Common
+        'vscode': { name: 'Visual Studio Code', desc: 'Code editor' },
+        'display_server': { name: 'Display Server', desc: 'X11 or Wayland session detected' },
+    };
+
     async function runSystemChecks() {
         try {
             const res = await fetch('/api/preflight');
             const data = await res.json();
             
+            state.isWayland = data.is_wayland;
+            state.displayServer = data.display_server || (data.is_wayland ? 'Wayland' : 'X11');
+
+            // Update display server badge in sidebar
+            const badgeLabel = document.getElementById('display-server-label');
+            const badge = document.getElementById('display-server-badge');
+            if (badgeLabel) {
+                badgeLabel.textContent = state.displayServer;
+                badge.classList.add(state.isWayland ? 'wayland' : 'x11');
+            }
+
+            // Show Wayland shortcut hint if on Wayland
+            if (state.isWayland) {
+                const hint = document.getElementById('wayland-shortcut-hint');
+                if (hint) hint.classList.remove('hidden');
+            }
+
             const container = document.getElementById('system-checks');
             container.innerHTML = ''; // clear loading
-            
-            const checkNames = {
-                'xdotool': 'xdotool (Desktop automation)',
-                'scrot': 'scrot (Screenshot tool)',
-                'xclip': 'xclip (Clipboard integration)',
-                'vscode': 'Visual Studio Code',
-                'x11': 'X11 Display Server (Not Wayland)'
-            };
             
             let allPassed = true;
             
@@ -102,13 +207,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const icon = passed ? '✓' : '✗';
                 const statusCls = passed ? 'pass' : 'fail';
+                const info = CHECK_NAMES[key] || { name: key, desc: '' };
+                const displayName = info.name;
+                const displayDesc = passed 
+                    ? (info.desc ? `${info.desc} — Ready` : 'Found & Ready')
+                    : (info.desc ? `${info.desc} — Missing or incompatible` : 'Missing or incompatible');
                 
                 container.innerHTML += `
                     <div class="check-card ${statusCls}">
                         <div class="check-icon">${icon}</div>
                         <div class="check-info">
-                            <h3>${checkNames[key] || key}</h3>
-                            <p>${passed ? 'Found & Ready' : 'Missing or incompatible'}</p>
+                            <h3>${displayName}</h3>
+                            <p>${displayDesc}</p>
                         </div>
                     </div>
                 `;
@@ -117,7 +227,22 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btn-next-1').disabled = !allPassed;
             
             if (!allPassed) {
-                container.innerHTML += `<div class="alert alert-warning full-width mt-3">Please resolve the failing requirements and refresh the page. Check the terminal/readme for install instructions.</div>`;
+                const toolList = state.isWayland 
+                    ? 'ydotool, wl-clipboard, grim' 
+                    : 'xdotool, scrot, xclip';
+
+                let helpMsg = `Please install missing tools: <code>${toolList}</code>`;
+                
+                if (state.isWayland) {
+                    if (!data.checks.ydotool_daemon) {
+                        helpMsg += '<br>Start the ydotool daemon: <code>sudo systemctl enable --now ydotoold</code>';
+                    }
+                    if (data.checks.uinput_access === false) {
+                        helpMsg += '<br>Fix uinput access: <code>sudo usermod -aG input $USER</code> then re-login.';
+                    }
+                }
+                
+                container.innerHTML += `<div class="alert alert-warning full-width mt-3">${helpMsg}</div>`;
             }
             
         } catch (e) {
@@ -336,6 +461,18 @@ document.addEventListener('DOMContentLoaded', () => {
             btnStart.disabled = !allChecked;
         });
     });
+
+    function updatePreflightForDisplayServer() {
+        // Show Wayland-specific permission alert
+        const waylandAlert = document.getElementById('wayland-permission-alert');
+        if (waylandAlert) {
+            if (state.isWayland) {
+                waylandAlert.classList.remove('hidden');
+            } else {
+                waylandAlert.classList.add('hidden');
+            }
+        }
+    }
 
     // Step 6: Pipeline Execution
     async function startPipeline() {

@@ -1,8 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# App runtime directories
 temp/
 uploads/
 output/
-__pycache__/
-*.pyc
-.venv/
-env/
-venv/
+
+# User-specific config (saved per-session settings)
+config/user_config.json
+
+# IDE / Editor settings
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db

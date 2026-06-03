@@ -17,6 +17,8 @@ app.config['TEMP_FOLDER'] = 'temp'
 app.config['OUTPUT_FOLDER'] = 'output'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 
+USER_CONFIG_PATH = os.path.join('config', 'user_config.json')
+
 # Ensure directories exist
 for folder in [app.config['UPLOAD_FOLDER'], app.config['TEMP_FOLDER'], app.config['OUTPUT_FOLDER']]:
     os.makedirs(folder, exist_ok=True)
@@ -35,7 +37,7 @@ def preflight_check():
     is_wayland = os.environ.get("XDG_SESSION_TYPE", "") == "wayland"
     
     checks = {
-        "x11_wayland_compat": True, # We support both now
+        "display_server": True,  # We support both now
         "vscode": False
     }
     
@@ -59,20 +61,88 @@ def preflight_check():
     # For Wayland, ydotool also requires the daemon to be running
     if is_wayland and checks.get("ydotool", False):
         try:
-            # Check if ydotoold is running (can be user or system service, or just running process)
-            res = subprocess.run(["pgrep", "ydotoold"], stdout=subprocess.PIPE)
-            if res.returncode != 0:
-                checks["ydotool_daemon"] = False
-            else:
-                checks["ydotool_daemon"] = True
+            res = subprocess.run(["pgrep", "-x", "ydotoold"], stdout=subprocess.PIPE)
+            daemon_running = res.returncode == 0
+
+            if not daemon_running:
+                # Try to auto-start ydotoold
+                started = False
+                
+                # Strategy 1: systemctl --user
+                try:
+                    subprocess.run(
+                        ["systemctl", "--user", "start", "ydotoold"],
+                        check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=5
+                    )
+                    time.sleep(0.5)
+                    res = subprocess.run(["pgrep", "-x", "ydotoold"], stdout=subprocess.PIPE)
+                    if res.returncode == 0:
+                        started = True
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+                    pass
+
+                # Strategy 2: sudo systemctl
+                if not started:
+                    try:
+                        subprocess.run(
+                            ["sudo", "-n", "systemctl", "start", "ydotoold"],
+                            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=5
+                        )
+                        time.sleep(0.5)
+                        res = subprocess.run(["pgrep", "-x", "ydotoold"], stdout=subprocess.PIPE)
+                        if res.returncode == 0:
+                            started = True
+                    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+                        pass
+
+                daemon_running = started
+
+            checks["ydotool_daemon"] = daemon_running
         except Exception:
             checks["ydotool_daemon"] = False
+
+        # Check /dev/uinput permissions
+        uinput_ok = os.path.exists("/dev/uinput") and os.access("/dev/uinput", os.W_OK)
+        checks["uinput_access"] = uinput_ok
             
     return jsonify({
         "status": "success" if all(checks.values()) else "warning",
         "checks": checks,
-        "is_wayland": is_wayland
+        "is_wayland": is_wayland,
+        "display_server": "Wayland" if is_wayland else "X11"
     })
+
+
+# --- Config Persistence ---
+
+@app.route('/api/config', methods=['GET'])
+def get_saved_config():
+    """Load saved user config from disk."""
+    if os.path.exists(USER_CONFIG_PATH):
+        try:
+            with open(USER_CONFIG_PATH, 'r') as f:
+                config = json.load(f)
+            return jsonify({"status": "success", "config": config})
+        except (json.JSONDecodeError, IOError):
+            return jsonify({"status": "success", "config": {}})
+    return jsonify({"status": "success", "config": {}})
+
+
+@app.route('/api/config', methods=['POST'])
+def save_config():
+    """Save user config to disk so it persists across sessions."""
+    config = request.json
+    if not config:
+        return jsonify({"error": "No config provided"}), 400
+    
+    try:
+        os.makedirs(os.path.dirname(USER_CONFIG_PATH), exist_ok=True)
+        with open(USER_CONFIG_PATH, 'w') as f:
+            json.dump(config, f, indent=2)
+        return jsonify({"status": "success"})
+    except IOError as e:
+        return jsonify({"error": f"Failed to save config: {e}"}), 500
+
 
 @app.route('/api/upload-template', methods=['POST'])
 def upload_template():

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deassignment - Automated Assignment Maker</title>
+    <meta name="description" content="An automated, self-hosted tool that generates polished PowerPoint presentations from programming assignment questions with AI-powered code generation and desktop automation. Supports both X11 and Wayland.">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
@@ -52,6 +53,13 @@
                     <span class="step-text">Processing</span>
                 </li>
             </ul>
+
+            <div class="sidebar-footer">
+                <div class="display-server-badge" id="display-server-badge" title="Detected display server">
+                    <span class="badge-dot"></span>
+                    <span class="badge-label" id="display-server-label">Detecting...</span>
+                </div>
+            </div>
         </aside>
 
         <!-- Main Content Area -->
@@ -83,13 +91,13 @@
             <section class="wizard-step" id="step-2">
                 <div class="step-header">
                     <h2>Configuration</h2>
-                    <p class="subtitle">Tell us about the assignment you're building.</p>
+                    <p class="subtitle">Tell us about the assignment you're building. <span class="config-restored-msg hidden" id="config-restored-msg">✨ Settings restored from last session.</span></p>
                 </div>
 
                 <form id="config-form" class="form-grid">
                     <div class="form-group">
-                        <label>Programming Language</label>
-                        <select name="language" required>
+                        <label for="config-language">Programming Language</label>
+                        <select name="language" id="config-language" required>
                             <option value="python">Python</option>
                             <option value="c">C</option>
                             <option value="cpp">C++</option>
@@ -99,8 +107,8 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Total Questions</label>
-                        <input type="number" name="total_questions" min="1" max="100" value="10" required>
+                        <label for="config-total-questions">Total Questions</label>
+                        <input type="number" name="total_questions" id="config-total-questions" min="1" max="100" value="10" required>
                     </div>
 
                     <div class="form-group full-width">
@@ -124,24 +132,28 @@
                     </div>
 
                     <div class="form-group step-by-step-options hidden">
-                        <label>Batch Size (Questions per prompt)</label>
-                        <input type="range" name="batch_size" min="5" max="25" value="10" oninput="this.nextElementSibling.value = this.value">
+                        <label for="config-batch-size">Batch Size (Questions per prompt)</label>
+                        <input type="range" name="batch_size" id="config-batch-size" min="5" max="25" value="10" oninput="this.nextElementSibling.value = this.value">
                         <output>10</output>
                     </div>
 
                     <div class="form-group full-width">
-                        <label>Desktop Switching Shortcuts (Linux)</label>
+                        <label>Desktop Switching Shortcuts</label>
                         <div class="shortcut-inputs">
                             <div class="input-group">
                                 <span>Left Desktop</span>
-                                <input type="text" name="shortcut_left" value="ctrl+shift+Left" placeholder="e.g. ctrl+shift+Left">
+                                <input type="text" name="shortcut_left" id="config-shortcut-left" value="ctrl+shift+Left" placeholder="e.g. ctrl+shift+Left">
                             </div>
                             <div class="input-group">
                                 <span>Right Desktop</span>
-                                <input type="text" name="shortcut_right" value="ctrl+shift+Right" placeholder="e.g. ctrl+shift+Right">
+                                <input type="text" name="shortcut_right" id="config-shortcut-right" value="ctrl+shift+Right" placeholder="e.g. ctrl+shift+Right">
                             </div>
                         </div>
-                        <p class="help-text">Default shortcuts for your desktop environment. <strong>Note:</strong> If your shortcut uses the Windows key, write it as <code>super</code> or <code>meta</code> (e.g. <code>super+Right</code>).</p>
+                        <p class="help-text" id="shortcut-help-text">
+                            Default shortcuts for your desktop environment.
+                            <strong>Tip:</strong> If your shortcut uses the Windows/Super key, write it as <code>super</code> or <code>meta</code> (e.g. <code>super+Right</code>).
+                            <span id="wayland-shortcut-hint" class="hidden"><br><strong>Wayland detected:</strong> Common Wayland shortcuts use <code>super+Left</code> / <code>super+Right</code> for workspace switching.</span>
+                        </p>
                     </div>
                 </form>
 
@@ -240,7 +252,7 @@
                     <p class="subtitle">Please confirm these items before we take over your mouse and keyboard.</p>
                 </div>
 
-                <div class="checklist">
+                <div class="checklist" id="preflight-checklist">
                     <label class="checklist-item">
                         <input type="checkbox" class="flight-check">
                         <div class="check-content">
@@ -273,6 +285,10 @@
 
                 <div class="alert alert-warning mt-4">
                     <strong>Critical:</strong> The tool will automatically switch desktops, open files, run commands, and take screenshots.
+                </div>
+
+                <div id="wayland-permission-alert" class="alert alert-info mt-3 hidden">
+                    <strong>Wayland Mode:</strong> Make sure <code>ydotoold</code> is running and your user has access to <code>/dev/uinput</code>. If you see permission errors, run: <code>sudo usermod -aG input $USER</code> and re-login.
                 </div>
 
                 <div class="step-actions">
