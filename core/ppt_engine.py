@@ -219,72 +219,203 @@ class PPTEngine:
         with open(output_path, "wb") as f:
             highlight(code, lexer, formatter, outfile=f)
 
-    def add_code_slide(self, q_num: int, q_statement: str, code: str, language: str, temp_dir: str):
+    def add_code_slide(self, q_num: int, q_statement: str, code: str, language: str, temp_dir: str, code_format: str = "text"):
         """
         Adds slide(s) containing the code and the question statement.
+        Supports rendering as a syntax-highlighted image or pasting as editable highlighted text.
         If code is too long, splits it across multiple slides.
         """
-        # 1. Render entire code to image
-        code_img_path = os.path.join(temp_dir, f"code_{q_num}.png")
-        self._code_to_image(code, language, code_img_path)
-        
-        # 2. Setup the first slide with the full question statement
-        slide = self._duplicate_template_slide()
-        header_text = f"Question {q_num}:\n{q_statement}"
-        header_bottom = self._add_header_to_slide(slide, header_text)
-        
-        left = Inches(self.config.get("safe_zone_left", 0.5))
-        top = header_bottom + Inches(0.2)
-        
-        max_width = self.prs.slide_width - Inches(self.config.get("safe_zone_left", 0.5) + self.config.get("safe_zone_right", 0.5))
-        max_height = self.prs.slide_height - top - Inches(self.config.get("safe_zone_bottom", 1.0))
-        
-        with Image.open(code_img_path) as img:
-            img_w, img_h = img.size
+        if code_format == "image":
+            # 1. Render entire code to image
+            code_img_path = os.path.join(temp_dir, f"code_{q_num}.png")
+            self._code_to_image(code, language, code_img_path)
             
-            # Calculate rendering scale (assume 96 DPI natively = 9525 EMUs per pixel)
-            EMUS_PER_PIXEL = 9525
+            # 2. Setup the first slide with the full question statement
+            slide = self._duplicate_template_slide()
+            header_text = f"Question {q_num}:\n{q_statement}"
+            header_bottom = self._add_header_to_slide(slide, header_text)
             
-            rendered_w = img_w * EMUS_PER_PIXEL
-            if rendered_w > max_width:
-                rendered_w = max_width
+            left = Inches(self.config.get("safe_zone_left", 0.5))
+            top = header_bottom + Inches(0.2)
+            
+            max_width = self.prs.slide_width - Inches(self.config.get("safe_zone_left", 0.5) + self.config.get("safe_zone_right", 0.5))
+            max_height = self.prs.slide_height - top - Inches(self.config.get("safe_zone_bottom", 1.0))
+            
+            with Image.open(code_img_path) as img:
+                img_w, img_h = img.size
                 
-            scale = rendered_w / (img_w * EMUS_PER_PIXEL)
-            rendered_h_full = img_h * EMUS_PER_PIXEL * scale
+                # Calculate rendering scale (assume 96 DPI natively = 9525 EMUs per pixel)
+                EMUS_PER_PIXEL = 9525
+                
+                rendered_w = img_w * EMUS_PER_PIXEL
+                if rendered_w > max_width:
+                    rendered_w = max_width
+                    
+                scale = rendered_w / (img_w * EMUS_PER_PIXEL)
+                rendered_h_full = img_h * EMUS_PER_PIXEL * scale
+                
+                if rendered_h_full <= max_height:
+                    slide.shapes.add_picture(code_img_path, left, top, width=rendered_w)
+                else:
+                    # Image is too tall, we need to crop and spill over to new slides
+                    y_offset = 0
+                    slide_idx = 0
+                    
+                    while y_offset < img_h:
+                        if slide_idx == 0:
+                            current_slide = slide
+                            current_max_h = max_height
+                            current_top = top
+                        else:
+                            current_slide = self._duplicate_template_slide()
+                            h_bottom = self._add_header_to_slide(current_slide, f"")
+                            current_top = h_bottom + Inches(0.2)
+                            current_max_h = self.prs.slide_height - current_top - Inches(self.config.get("safe_zone_bottom", 1.0))
+                            
+                        # How many pixels can fit in the available height?
+                        px_to_fit = int(current_max_h / (EMUS_PER_PIXEL * scale))
+                        
+                        if px_to_fit <= 50:
+                            px_to_fit = 200 # Fallback to prevent infinite loop
+                            
+                        crop_box = (0, y_offset, img_w, min(y_offset + px_to_fit, img_h))
+                        cropped = img.crop(crop_box)
+                        chunk_path = os.path.join(temp_dir, f"code_chunk_{q_num}_{slide_idx}.png")
+                        cropped.save(chunk_path)
+                        
+                        current_slide.shapes.add_picture(chunk_path, left, current_top, width=rendered_w)
+                        
+                        y_offset += px_to_fit
+                        slide_idx += 1
+        else:
+            # 1. Parse code into tokens and group by lines
+            from pygments.styles import get_style_by_name
             
-            if rendered_h_full <= max_height:
-                slide.shapes.add_picture(code_img_path, left, top, width=rendered_w)
+            lexer = get_lexer_by_name(language)
+            style = get_style_by_name(self.config.get("code_style", "monokai"))
+            
+            tokens = list(lexer.get_tokens(code))
+            lines = []
+            current_line = []
+            for t_type, t_val in tokens:
+                if '\n' in t_val:
+                    parts = t_val.split('\n')
+                    for idx, part in enumerate(parts):
+                        if idx > 0:
+                            lines.append(current_line)
+                            current_line = []
+                        if part:
+                            current_line.append((t_type, part))
+                else:
+                    if t_val:
+                        current_line.append((t_type, t_val))
+            if current_line:
+                lines.append(current_line)
+            
+            if not lines:
+                lines = [[]]
+                
+            # 2. Setup first slide
+            slide = self._duplicate_template_slide()
+            header_text = f"Question {q_num}:\n{q_statement}"
+            header_bottom = self._add_header_to_slide(slide, header_text)
+            
+            left = Inches(self.config.get("safe_zone_left", 0.5))
+            top = header_bottom + Inches(0.2)
+            
+            max_width = self.prs.slide_width - Inches(self.config.get("safe_zone_left", 0.5) + self.config.get("safe_zone_right", 0.5))
+            max_height = self.prs.slide_height - top - Inches(self.config.get("safe_zone_bottom", 1.0))
+            
+            # Resolve background color and fallback text color
+            bg_hex = style.background_color.lstrip('#')
+            bg_r = int(bg_hex[0:2], 16)
+            bg_g = int(bg_hex[2:4], 16)
+            bg_b = int(bg_hex[4:6], 16)
+            bg_color_rgb = RGBColor(bg_r, bg_g, bg_b)
+            
+            # Perceive luminance to ensure text readability
+            luminance = bg_r * 0.299 + bg_g * 0.587 + bg_b * 0.114
+            if luminance < 128:
+                default_text_color = RGBColor(240, 240, 240)
             else:
-                # Image is too tall, we need to crop and spill over to new slides
-                y_offset = 0
-                slide_idx = 0
+                default_text_color = RGBColor(30, 30, 30)
                 
-                while y_offset < img_h:
-                    if slide_idx == 0:
-                        current_slide = slide
-                        current_max_h = max_height
-                        current_top = top
+            # Compute lines that can fit on each slide (standard monospace font size 11pt, line height 1.25)
+            font_size_pt = 11
+            line_height_pt = font_size_pt * 1.25
+            max_height_pt = max_height / 12700
+            max_lines_per_slide = max(1, int(max_height_pt / line_height_pt) - 1)
+            
+            total_lines = len(lines)
+            width_format = f"{{:{len(str(total_lines))}d}}  "
+            
+            slide_idx = 0
+            start_line_idx = 0
+            
+            while start_line_idx < total_lines:
+                if slide_idx == 0:
+                    current_slide = slide
+                    current_top = top
+                    current_max_h = max_height
+                else:
+                    current_slide = self._duplicate_template_slide()
+                    h_bottom = self._add_header_to_slide(current_slide, f"")
+                    current_top = h_bottom + Inches(0.2)
+                    current_max_h = self.prs.slide_height - current_top - Inches(self.config.get("safe_zone_bottom", 1.0))
+                
+                end_line_idx = min(start_line_idx + max_lines_per_slide, total_lines)
+                batch_lines = lines[start_line_idx:end_line_idx]
+                
+                # Create the code textbox container
+                textbox = current_slide.shapes.add_textbox(left, current_top, max_width, current_max_h)
+                tf = textbox.text_frame
+                tf.word_wrap = True
+                tf.margin_left = Inches(0.15)
+                tf.margin_right = Inches(0.15)
+                tf.margin_top = Inches(0.15)
+                tf.margin_bottom = Inches(0.15)
+                
+                textbox.fill.solid()
+                textbox.fill.fore_color.rgb = bg_color_rgb
+                
+                for line_idx, line_tokens in enumerate(batch_lines):
+                    if line_idx > 0:
+                        p = tf.add_paragraph()
                     else:
-                        current_slide = self._duplicate_template_slide()
-                        h_bottom = self._add_header_to_slide(current_slide, f"")
-                        current_top = h_bottom + Inches(0.2)
-                        current_max_h = self.prs.slide_height - current_top - Inches(self.config.get("safe_zone_bottom", 1.0))
+                        p = tf.paragraphs[0]
+                    p.line_spacing = 1.2
+                    
+                    # Prepend line number
+                    line_num_run = p.add_run()
+                    line_num_run.text = width_format.format(start_line_idx + line_idx + 1)
+                    line_num_run.font.name = PPTEngine._resolved_font or "Courier New"
+                    line_num_run.font.size = Pt(font_size_pt)
+                    line_num_run.font.color.rgb = RGBColor(128, 128, 128)
+                    
+                    # Add code token runs with syntax highlighting styles
+                    for token_type, token_val in line_tokens:
+                        run = p.add_run()
+                        run.text = token_val
+                        run.font.name = PPTEngine._resolved_font or "Courier New"
+                        run.font.size = Pt(font_size_pt)
                         
-                    # How many pixels can fit in the available height?
-                    px_to_fit = int(current_max_h / (EMUS_PER_PIXEL * scale))
-                    
-                    if px_to_fit <= 50:
-                        px_to_fit = 200 # Fallback to prevent infinite loop
-                        
-                    crop_box = (0, y_offset, img_w, min(y_offset + px_to_fit, img_h))
-                    cropped = img.crop(crop_box)
-                    chunk_path = os.path.join(temp_dir, f"code_chunk_{q_num}_{slide_idx}.png")
-                    cropped.save(chunk_path)
-                    
-                    current_slide.shapes.add_picture(chunk_path, left, current_top, width=rendered_w)
-                    
-                    y_offset += px_to_fit
-                    slide_idx += 1
+                        style_info = style.style_for_token(token_type)
+                        color = style_info.get('color')
+                        if color:
+                            r = int(color[0:2], 16)
+                            g = int(color[2:4], 16)
+                            b = int(color[4:6], 16)
+                            run.font.color.rgb = RGBColor(r, g, b)
+                        else:
+                            run.font.color.rgb = default_text_color
+                            
+                        if style_info.get('bold'):
+                            run.font.bold = True
+                        if style_info.get('italic'):
+                            run.font.italic = True
+                
+                start_line_idx = end_line_idx
+                slide_idx += 1
 
     def add_screenshot_slide(self, q_num: int, screenshot_path: str):
         """Adds a slide containing the execution screenshot."""

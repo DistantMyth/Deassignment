@@ -99,7 +99,8 @@ class Pipeline:
                 
                 # 1. PPT Code Slide (Now contains question statement as well)
                 logger.info("Creating code slide with syntax highlighting")
-                self.ppt_engine.add_code_slide(q_num, statement, code, self.language, self.temp_dir)
+                code_format = self.config.get("code_format", "text")
+                self.ppt_engine.add_code_slide(q_num, statement, code, self.language, self.temp_dir, code_format=code_format)
                 
                 if self._check_cancelled():
                     progress_callback({"status": "cancelled", "message": "Processing cancelled."})
