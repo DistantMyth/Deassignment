@@ -121,6 +121,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (output) output.value = cfg.batch_size;
                     }
                 }
+                if (cfg.code_format) {
+                    const formatRadio = document.querySelector(`input[name="code_format"][value="${cfg.code_format}"]`);
+                    if (formatRadio) formatRadio.checked = true;
+                }
                 if (cfg.shortcut_left) {
                     const leftInput = document.getElementById('config-shortcut-left');
                     if (leftInput) leftInput.value = cfg.shortcut_left;

@@ -9,8 +9,8 @@ An automated, self-hosted web tool that takes programming assignment questions, 
 - 🪄 **Wizard UI**: A beautiful, step-by-step interface to guide you through the process.
 - 🤖 **AI Prompt Generation**: Automatically creates prompts for ChatGPT, Claude, or Gemini in "All at once" or "Step-by-step" modes (to prevent hallucination on large assignments).
 - 🖥️ **Full Desktop Automation**: Supports **X11**, **Wayland**, and **macOS** natively — switches virtual desktops, focuses VSCode, opens files, runs commands, and takes screenshots.
-- 🖼️ **Syntax Highlighting**: Uses `Pygments` to render your code into beautiful, presentation-ready images with automatic font detection and fallback.
-- 📊 **PPTX Generation**: Clones the last slide of your provided template and formats the questions, code, and screenshots perfectly within the safe zones.
+- 🖼️ **Syntax Highlighting (Editable Text or Images)**: Paste code directly into slides as fully-editable, syntax-highlighted monospace text boxes, or insert them as high-res static images using `Pygments` (configurable in the UI).
+- 📊 **PPTX Generation**: Clones the last slide of your provided template and formats the questions, code (supporting dynamic splitting across slides for long code blocks), and screenshots perfectly within the safe zones.
 - ⚡ **Real-time Progress**: Watch the automation happen with live Server-Sent Events (SSE) updates in the browser.
 - 💾 **Config Persistence**: Your settings (language, shortcuts, batch size) are remembered across sessions.
 
@@ -27,6 +27,23 @@ An automated, self-hosted web tool that takes programming assignment questions, 
    ./venv/bin/python app.py
    ```
 4. Open your browser and go to: **http://127.0.0.1:5000**
+
+### How to Update (for existing installations)
+
+If you already have Deassignment installed and want to update to the latest version:
+1. Pull the latest code:
+   ```bash
+   git pull
+   ```
+2. Activate your virtual environment and update dependencies:
+   ```bash
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+3. Restart the application:
+   ```bash
+   python app.py
+   ```
 
 ## Platform Setup & Permissions
 
